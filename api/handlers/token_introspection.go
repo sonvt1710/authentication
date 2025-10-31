@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/lee-tech/authentication/internal/service"
 	coreErrors "github.com/lee-tech/core/errors"
 	coreServer "github.com/lee-tech/core/server"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // TokenIntrospectionRequest represents a token introspection request
@@ -19,29 +20,31 @@ type TokenIntrospectionRequest struct {
 
 // TokenIntrospectionResponse represents a token introspection response
 type TokenIntrospectionResponse struct {
-	Active      bool      `json:"active"`
-	Sub         string    `json:"sub,omitempty"`
-	Username    string    `json:"username,omitempty"`
-	Email       string    `json:"email,omitempty"`
-	OrganizationID string `json:"organization_id,omitempty"`
-	Scopes      []string  `json:"scope,omitempty"`
-	IssuedAt    *int64    `json:"iat,omitempty"`
-	ExpiresAt   *int64    `json:"exp,omitempty"`
-	NotBefore   *int64    `json:"nbf,omitempty"`
-	ClientID    string    `json:"client_id,omitempty"`
-	TokenType   string    `json:"token_type,omitempty"`
+	Active         bool     `json:"active"`
+	Sub            string   `json:"sub,omitempty"`
+	Username       string   `json:"username,omitempty"`
+	Email          string   `json:"email,omitempty"`
+	OrganizationID string   `json:"organization_id,omitempty"`
+	DepartmentID   string   `json:"department_id,omitempty"`
+	RoleIDs        string   `json:"role_id,omitempty"`
+	Scopes         []string `json:"scope,omitempty"`
+	IssuedAt       *int64   `json:"iat,omitempty"`
+	ExpiresAt      *int64   `json:"exp,omitempty"`
+	NotBefore      *int64   `json:"nbf,omitempty"`
+	ClientID       string   `json:"client_id,omitempty"`
+	TokenType      string   `json:"token_type,omitempty"`
 }
 
 // TokenIntrospectionHandler handles token introspection requests
 type TokenIntrospectionHandler struct {
-	authService    *service.AuthenticationService
+	authService         *service.AuthenticationService
 	introspectionSecret string
 }
 
 // NewTokenIntrospectionHandler creates a new token introspection handler
 func NewTokenIntrospectionHandler(authService *service.AuthenticationService, introspectionSecret string) *TokenIntrospectionHandler {
 	return &TokenIntrospectionHandler{
-		authService:        authService,
+		authService:         authService,
 		introspectionSecret: introspectionSecret,
 	}
 }
@@ -65,13 +68,13 @@ func (h *TokenIntrospectionHandler) RegisterRoutes(router *mux.Router) {
 				Required: true,
 				ModelKey: "token-introspection-response",
 				Example: map[string]interface{}{
-					"active":        true,
-					"sub":          "1234567890",
-					"username":     "johndoe",
-					"email":        "john@example.com",
-					"token_type":   "access",
-					"exp":         1234567890,
-					"iat":         1234567890,
+					"active":     true,
+					"sub":        "1234567890",
+					"username":   "johndoe",
+					"email":      "john@example.com",
+					"token_type": "access",
+					"exp":        1234567890,
+					"iat":        1234567890,
 				},
 			},
 		}),
@@ -82,7 +85,7 @@ func (h *TokenIntrospectionHandler) RegisterRoutes(router *mux.Router) {
 // Introspect validates a token and returns its metadata
 func (h *TokenIntrospectionHandler) Introspect(w http.ResponseWriter, r *http.Request) {
 	var req TokenIntrospectionRequest
-	if err := coreServer.DecodeJSON(r.Body, &req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		coreErrors.BadRequest("Invalid request body").WriteHTTP(w)
 		return
 	}
@@ -169,5 +172,5 @@ func int64Ptr(i int64) *int64 {
 
 func uint64ToString(u uint64) string {
 	// Convert uint64 to string
-	return string(rune(u))
+	return fmt.Sprintf("%d", u)
 }

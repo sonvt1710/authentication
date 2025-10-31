@@ -29,7 +29,7 @@ func main() {
 		adminAuthorizationBuilder = handlers.NewAdminAuthorizationBuilder()
 	)
 
-	checker, authorizationEnabled, err := coreMiddleware.NewAuthorizationCheckerFromConfig(cfg.Config, nil)
+	checker, authorizationEnabled, err := coreMiddleware.NewAuthorizationCheckerFromConfig(cfg.Config, nil, nil)
 	if err != nil {
 		log.Printf("failed to initialise authorization client: %v", err)
 	} else if authorizationEnabled && checker != nil {
