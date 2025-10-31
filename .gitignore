@@ -22,6 +22,7 @@ go.work
 go.work.sum
 .gomodcache/
 .gocache/
+.cache/
 # Environment variables
 .env
 .env.local
