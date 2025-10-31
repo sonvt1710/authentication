@@ -1,0 +1,96 @@
+# Reusable Air configuration template for all services
+# Copy this to your service root as .air.toml and customize as needed
+# Or symlink: ln -s ../core/configs/air.toml.template .air.toml
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Customize these for your service:
+  # cmd = "go build -o ./tmp/SERVICE_NAME ./cmd/main.go"
+  # bin = "tmp/SERVICE_NAME"
+
+  # Default build command (will be overridden by service-specific config)
+  cmd = "go mod download && go build -o ./tmp/authentication-service ./cmd/main.go"
+  bin = "tmp/authentication-service"
+
+  # Run binary with environment
+  full_bin = "./tmp/authentication-service"
+
+  # File extensions to watch
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "toml", "env", "sql"]
+
+  # Directories to exclude from watching
+  exclude_dir = ["assets", "tmp", "vendor", "frontend/node_modules", ".git", ".github", "scripts", "docs", "bin", "dist"]
+
+  # Include specific directories (empty = all)
+  include_dir = []
+
+  # Include specific files
+  include_file = [".env"]
+
+  # Exclude files
+  exclude_file = []
+
+  # Exclude regex patterns
+  exclude_regex = ["_test\\.go", ".*\\.pb\\.go", ".*\\.gen\\.go"]
+
+  # Don't rebuild on unchanged files
+  exclude_unchanged = true
+
+  # Follow symlinks
+  follow_symlink = true
+
+  # Log file
+  log = "air.log"
+
+  # Build arguments
+  args_bin = []
+
+  # Polling configuration
+  poll = false
+  poll_interval = 500
+
+  # Build delay (ms) - wait before rebuilding
+  delay = 1000
+
+  # Stop on build error
+  stop_on_error = true
+
+  # Send interrupt signal for graceful shutdown
+  send_interrupt = true
+
+  # Kill delay after interrupt (ms)
+  kill_delay = 2000
+
+  # Rerun configuration
+  rerun = false
+  rerun_delay = 500
+
+  # Pre/post build commands
+  pre_cmd = []
+  post_cmd = []
+
+[log]
+  # Show timestamps in logs
+  time = true
+  # Only show main log
+  main_only = false
+
+[color]
+  # Console colors
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+  app = ""
+
+[misc]
+  # Clean tmp directory on exit
+  clean_on_exit = true
+
+[screen]
+  # Don't clear screen on rebuild
+  clear_on_rebuild = false
+  # Keep scroll position
+  keep_scroll = true
