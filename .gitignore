@@ -20,7 +20,8 @@ vendor/
 # Go workspace file
 go.work
 go.work.sum
-
+# .gomodcache/
+# .gocache/
 # Environment variables
 .env
 .env.local
