@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lee-tech/authentication/internal/constants"
 	"github.com/lee-tech/authentication/internal/models"
@@ -286,10 +285,6 @@ func (h *OrganizationHandler) ListUserDepartments(w http.ResponseWriter, r *http
 	}
 
 	utils.RespondJSON(w, http.StatusOK, memberships)
-}
-
-func parseUUID(raw string) (uuid.UUID, error) {
-	return uuid.Parse(raw)
 }
 
 func init() {

@@ -103,6 +103,49 @@ func (h *AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 		coreServer.WithDescription("Retrieve the authenticated user's profile"),
 		coreServer.WithTags("Authentication"),
 		coreServer.RequireAuth(),
+		coreServer.WithResponseMeta(map[int]coreServer.BodyMeta{
+			http.StatusOK: {
+				Required:    true,
+				ModelKey:    "user-profile-response",
+				Description: "Current user profile information",
+				Example: map[string]any{
+					"id":                     1,
+					"email":                  "admin@company.com",
+					"username":               "root-admin",
+					"first_name":             "System",
+					"last_name":              "Administrator",
+					"primary_organization_id": 1,
+					"primary_department_id":   1,
+					"is_super_admin":         true,
+					"mfa_enabled":            false,
+					"organizations": []any{
+						map[string]any{
+							"organization_id":   1,
+							"organization_name": "Default Organization",
+							"role":              "SYSTEM_ADMIN",
+							"is_primary":        true,
+						},
+					},
+					"departments": []any{
+						map[string]any{
+							"department_id":   1,
+							"department_name": "IT Department",
+							"role":            "ADMIN",
+							"is_primary":      true,
+						},
+					},
+				},
+			},
+			http.StatusUnauthorized: {
+				Required:    true,
+				ModelKey:    "unauthorized-response",
+				Description: "Unauthorized access",
+				Example: map[string]any{
+					"error":   "Unauthorized",
+					"message": "user context missing",
+				},
+			},
+		}),
 	)
 
 	coreServer.Route(router, "/refresh", h.RefreshToken,
@@ -111,6 +154,36 @@ func (h *AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 		coreServer.WithDescription("Refresh the access token using a refresh token"),
 		coreServer.WithTags("Authentication"),
 		coreServer.AllowAnonymous(),
+		coreServer.WithRequestBody(&coreServer.BodyMeta{
+			Required:  true,
+			ModelKey:  "refresh-token-request",
+			Description: "Refresh token request containing the refresh token",
+			Example: map[string]any{
+				"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzdXBhYmFzZSIsIn",
+			},
+		}),
+		coreServer.WithResponseMeta(map[int]coreServer.BodyMeta{
+			http.StatusOK: {
+				Required:    true,
+				ModelKey:    "refresh-token-response",
+				Description: "Successful token refresh response",
+				Example: map[string]any{
+					"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzdXBhYmFzZSIsIn",
+					"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzdXBhYmFzZSIsIn",
+					"expires_in":    3600,
+					"token_type":    "Bearer",
+				},
+			},
+			http.StatusUnauthorized: {
+				Required:    true,
+				ModelKey:    "invalid-refresh-token-response",
+				Description: "Invalid or expired refresh token",
+				Example: map[string]any{
+					"error":   "Unauthorized",
+					"message": "Invalid or expired refresh token",
+				},
+			},
+		}),
 	)
 
 	// Administrative routes (require elevated permissions)
@@ -126,6 +199,78 @@ func (h *AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 		coreServer.WithDescription("List users with administrative privileges"),
 		coreServer.WithTags("Administration"),
 		coreServer.RequireAuth(),
+		coreServer.WithParams(
+			coreServer.ParamMeta{
+				Name:        "page",
+				In:          coreServer.ParamInQuery,
+				Required:    false,
+				Description: "Page number (default: 1)",
+			},
+			coreServer.ParamMeta{
+				Name:        "page_size",
+				In:          coreServer.ParamInQuery,
+				Required:    false,
+				Description: "Number of users per page, max 100 (default: 20)",
+			},
+		),
+		coreServer.WithResponseMeta(map[int]coreServer.BodyMeta{
+			http.StatusOK: {
+				Required:    true,
+				ModelKey:    "user-list-response",
+				Description: "Paginated list of users",
+				Example: map[string]any{
+					"data": []any{
+						map[string]any{
+							"id":         1,
+							"email":      "admin@company.com",
+							"username":   "root-admin",
+							"first_name": "System",
+							"last_name":  "Administrator",
+							"is_super_admin": true,
+							"organizations": []any{
+								map[string]any{
+									"organization_id":   1,
+									"organization_name": "Default Organization",
+									"role":              "SYSTEM_ADMIN",
+									"is_primary":        true,
+								},
+							},
+						},
+						map[string]any{
+							"id":         2,
+							"email":      "user@company.com",
+							"username":   "john.doe",
+							"first_name": "John",
+							"last_name":  "Doe",
+							"is_super_admin": false,
+							"organizations": []any{
+								map[string]any{
+									"organization_id":   1,
+									"organization_name": "Default Organization",
+									"role":              "USER",
+									"is_primary":        true,
+								},
+							},
+						},
+					},
+					"pagination": map[string]any{
+						"page":        1,
+						"page_size":   20,
+						"total":       100,
+						"total_pages": 5,
+					},
+				},
+			},
+			http.StatusForbidden: {
+				Required:    true,
+				ModelKey:    "forbidden-response",
+				Description: "Insufficient permissions",
+				Example: map[string]any{
+					"error":   "Forbidden",
+					"message": "insufficient permissions",
+				},
+			},
+		}),
 	)
 }
 
@@ -142,8 +287,12 @@ func (h *AuthenticationHandler) Login(w http.ResponseWriter, r *http.Request) {
 		coreErrors.ValidationError("Username and password are required").WriteHTTP(w)
 		return
 	}
-	if req.OrganizationID == 0 || req.RoleID == 0 {
-		coreErrors.ValidationError("Organization ID and Role ID are required").WriteHTTP(w)
+	if req.OrganizationID == 0 {
+		coreErrors.ValidationError("Organization ID is required").WriteHTTP(w)
+		return
+	}
+	if req.RoleID == 0 && req.DepartmentID == 0 {
+		coreErrors.ValidationError("Either Role ID or Department ID is required").WriteHTTP(w)
 		return
 	}
 
